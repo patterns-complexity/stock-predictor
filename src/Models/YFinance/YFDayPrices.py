@@ -37,7 +37,6 @@ class YFDayPrices:
         - `Close`
         - `Adj Close`
         """
-        print(self._data)
         return self._data[price_type]
 
     def get_volume(self) -> pd.Series:
