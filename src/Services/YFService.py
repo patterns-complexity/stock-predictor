@@ -22,7 +22,7 @@ class YFService(Service):
         Returns a pandas DataFrame of the data for the specified Yahoo Finance tickers
         """
         ticker = ", ".join(tickers)
-        data = yf.download(
+        data: pd.DataFrame = yf.download(
             tickers=ticker,
             period=getenv('DATA_PERIOD'),
             interval=getenv('DATA_INTERVAL'),
@@ -32,5 +32,8 @@ class YFService(Service):
             threads=getenv('MAX_THREADS'),
             proxy=None
         )
+
+        data.dropna(inplace=True)
+        data.interpolate(inplace=True)
 
         return data
