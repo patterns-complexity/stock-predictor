@@ -1,3 +1,9 @@
-.env
+/.env
 __pycache__
 /logs/*
+/cache/*
+/.env.train
+/.vscode
+/lightning_logs
+/runs
+```
