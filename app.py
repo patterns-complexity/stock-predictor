@@ -1,38 +1,50 @@
-# Bootstrap
+from shutil import rmtree
 
-# %% Imports
-from environs import Env
-from datetime import datetime
+from pytorch_lightning import Trainer
+from torch import float32, set_float32_matmul_precision
+from torch.utils.data import DataLoader
 
 from src.Classes.Datasets.YFTrainDataset import YFTrainDataset
+from src.Classes.Models.StockPredictor import OptimizedLSTMWithAttention as AdvancedStockPredictor
 
-# %% Parse environment variables
-env = Env()
-env.read_env()
+from Environment import *
 
-# %% Determine range of dates
-# timezone utc
-date_start = datetime(2021, 1, 1)
-date_end = datetime(2022, 12, 31)
-single_date = datetime(2021, 6, 1)
-price_type = "Open"
+# %% Set precision
+set_float32_matmul_precision('medium')
 
-# %% Get data
-yf_train_dataset = YFTrainDataset(
-    tickers=["AAPL"],
-    max_size=1000,
-    future_days_range=7,
-    past_days_range=30
-)
+# %% Clear logs
+if __name__ == "__main__":
+    rmtree('lightning_logs', ignore_errors=True)
 
-# %% Get data for a single date to look up if the data is correct
-for data in yf_train_dataset:
-    x, y, z = data
+    yf_train_dataset = YFTrainDataset(
+        tickers=TICKERS,
+        max_size=DATA_SAMPLES,
+        future_days_delta=FUTURE_DAYS_DELTA,
+        history_days_count=HISTORY_DAYS_COUNT,
+        dtype=float32,
+    )
 
-    print('past', type(x))
-    print('future', type(y))
-    print('date', type(z))
+    yf_train_dataloader = DataLoader(
+        yf_train_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=NUM_WORKERS,
+        drop_last=True,
+    )
 
-    break
+    model: AdvancedStockPredictor = AdvancedStockPredictor(
+        input_dim=PRICES_PER_TICKER_COUNT*len(TICKERS),
+        sequence_length=HISTORY_DAYS_COUNT,
+        hidden_dim=HIDDEN_DIM,
+        learning_rate=LEARNING_RATE,
+        batch_size=BATCH_SIZE,
+    ).to('cuda', dtype=float32)
 
-# %% Get data for a range of dates
+    trainer = Trainer(
+        max_epochs=NUM_EPOCHS,
+        log_every_n_steps=15,
+    )
+
+    trainer.fit(model, yf_train_dataloader)
+
+# %% save model
