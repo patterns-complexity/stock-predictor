@@ -22,6 +22,7 @@ if __name__ == "__main__":
         future_days_delta=FUTURE_DAYS_DELTA,
         history_days_count=HISTORY_DAYS_COUNT,
         ticker_to_predict=TICKER_TO_PREDICT,
+        price_type=PRICE_TYPE,
         dtype=float32,
     )
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=NUM_WORKERS,
-        drop_last=True,
+        drop_last=True
     )
 
     model: AdvancedStockPredictor = AdvancedStockPredictor(

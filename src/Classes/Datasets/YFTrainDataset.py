@@ -19,6 +19,7 @@ class YFTrainDataset(Dataset):
         future_days_delta: int = 7,
         history_days_count: int = 30,
         device: str = "cuda",
+        price_type: str = "Close",
         dtype: dtype = float64
     ):
         """
@@ -51,6 +52,7 @@ class YFTrainDataset(Dataset):
         super(YFTrainDataset, self).__init__()
 
         self._ticker_to_predict = ticker_to_predict
+        self._price_type = price_type
 
         self._max_size = max_size
         self._device = device
@@ -79,7 +81,7 @@ class YFTrainDataset(Dataset):
             date=random_date + Timedelta(days=self.future_days_delta)
         )
 
-        future_data_for_ticker = future_data[self._ticker_to_predict]
+        future_data_for_ticker = future_data[self._ticker_to_predict][self._price_type]
 
         return [
             self.data_to_tensor(past_data),
@@ -87,8 +89,11 @@ class YFTrainDataset(Dataset):
             self.date_to_tensor(random_date)
         ]
 
-    def data_to_tensor(self, data: DataFrame) -> Tensor:
-        return tensor(data.values, dtype=self._dtype)
+    def data_to_tensor(self, data: DataFrame | float) -> Tensor:
+        if isinstance(data, DataFrame):
+            return tensor(data.values, dtype=self._dtype)
+        else:
+            return tensor(data, dtype=self._dtype)
 
     def date_to_tensor(self, date: datetime) -> Tensor:
         day, month, year = date.day, date.month, date.year
