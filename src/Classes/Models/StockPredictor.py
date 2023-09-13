@@ -27,7 +27,8 @@ class OptimizedLSTMWithAttention(LM):
         # Output Layer
         self.fc2 = nn.Linear(
             hidden_dim // 2 * sequence_length,
-            input_dim)
+            5
+        )
 
         # Batch Normalization
         self.batch_norm = nn.BatchNorm1d(sequence_length)
@@ -67,11 +68,11 @@ class OptimizedLSTMWithAttention(LM):
     def training_step(self, batch, batch_idx):
         x, y, _ = batch
         y_hat = self(x)
-        loss = F.mse_loss(y_hat, y).mean()
-        prediction_error = torch.abs(y_hat - y).mean()
+        loss = F.mse_loss(y_hat, y)
+        prediction_error = torch.abs(y_hat - y)
         self.log_dict({
-            'train_loss': loss,
-            'train_mae_loss': prediction_error,
+            'train_loss': loss.item(),
+            'train_mae_loss': torch.mean(prediction_error).item(),
         },
             logger=True,
             on_step=True,
