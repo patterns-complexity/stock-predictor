@@ -21,6 +21,7 @@ if __name__ == "__main__":
         max_size=DATA_SAMPLES,
         future_days_delta=FUTURE_DAYS_DELTA,
         history_days_count=HISTORY_DAYS_COUNT,
+        ticker_to_predict=TICKER_TO_PREDICT,
         dtype=float32,
     )
 
