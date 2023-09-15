@@ -1,3 +1,5 @@
 environs==9.5.0
 pandas==2.1.0
+pytorch_lightning==2.0.8
+torch==2.1.0.dev20230901+cu121
 yfinance==0.2.28

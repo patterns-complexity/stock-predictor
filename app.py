@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader
 from src.Classes.Datasets.YFTrainDataset import YFTrainDataset
 from src.Classes.Models.StockPredictor import OptimizedLSTMWithAttention as AdvancedStockPredictor
 
+from pytorch_lightning.callbacks import ModelCheckpoint
+
 from Environment import *
 
 # %% Set precision
@@ -16,11 +18,16 @@ set_float32_matmul_precision('medium')
 if __name__ == "__main__":
     rmtree('lightning_logs', ignore_errors=True)
 
+    checkpoint_callback = ModelCheckpoint(
+        dirpath='./checkpoints',
+        filename='OptimizedLSTMWithAttention-{epoch:02d}-{train_loss:.2f}',
+    )
+
     yf_train_dataset = YFTrainDataset(
         tickers=TICKERS,
         max_size=DATA_SAMPLES,
-        future_days_delta=FUTURE_DAYS_DELTA,
-        history_days_count=HISTORY_DAYS_COUNT,
+        future_offset_point=FUTURE_OFFSET_POINT,
+        history_time_range=HISTORY_TIME_RANGE,
         ticker_to_predict=TICKER_TO_PREDICT,
         price_type=PRICE_TYPE,
         dtype=float32,
@@ -36,7 +43,7 @@ if __name__ == "__main__":
 
     model: AdvancedStockPredictor = AdvancedStockPredictor(
         input_dim=PRICES_PER_TICKER_COUNT*len(TICKERS),
-        sequence_length=HISTORY_DAYS_COUNT,
+        sequence_length=HISTORY_TIME_RANGE,
         hidden_dim=HIDDEN_DIM,
         learning_rate=LEARNING_RATE,
         batch_size=BATCH_SIZE,
@@ -45,6 +52,7 @@ if __name__ == "__main__":
     trainer = Trainer(
         max_epochs=NUM_EPOCHS,
         log_every_n_steps=15,
+        callbacks=[checkpoint_callback],
     )
 
     trainer.fit(model, yf_train_dataloader)

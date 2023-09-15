@@ -69,11 +69,15 @@ class OptimizedLSTMWithAttention(LM):
         x, y, _ = batch
         y_hat = self(x)
         squeezed_y_hat = y_hat.squeeze()
+
         loss = F.mse_loss(squeezed_y_hat, y)
+
         prediction_error = torch.abs(squeezed_y_hat - y)
+
         self.log_dict({
             'train_loss': loss.item(),
             'train_mae_loss': torch.mean(prediction_error).item(),
+            'train_percentage_loss': torch.mean(prediction_error / y).item(),
         },
             logger=True,
             on_step=True,

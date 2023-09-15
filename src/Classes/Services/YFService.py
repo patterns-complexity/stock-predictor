@@ -1,11 +1,7 @@
-# YFinanceService
-
-# Imports
 from pandas import DataFrame, date_range
 from yfinance import download
 from os import getenv
 
-# Own imports
 from src.Classes.Services.Service import Service
 
 
@@ -33,22 +29,26 @@ class YFService(Service):
             proxy=None
         )
 
+        # TODO: Start actually using cache lmao
         data.to_csv('./cache/raw.csv')
 
         # Drop rows with "NaN" values
         data = data.dropna(axis=0, how="any")
 
-        # Interpolate missing rows so that dates are continuous
-        data = data.reindex(
-            date_range(start=data.index[0], end=data.index[-1], freq="1D")
-        )
+        # Reindex data
+        data = data.reindex(date_range(
+            start=data.index[0],
+            end=data.index[-1],
+            freq=getenv('DATA_INTERVAL')
+        ))
 
-        # Fill missing values with interpolation
-        data = data.interpolate(method="linear")
+        # Interpolate data
+        data = data.interpolate(method='linear', axis=0)
 
         # Group by ticker
         data.groupby(axis=1, level=0)
 
+        # TODO: Start actually using cache lmao
         data.to_csv('./cache/processed.csv')
 
         return data
