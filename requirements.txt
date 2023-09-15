@@ -1,5 +1,9 @@
+colorama==0.4.6
 environs==9.5.0
 pandas==2.1.0
 pytorch_lightning==2.0.8
+tabulate==0.9.0
 torch==2.1.0.dev20230901+cu121
 yfinance==0.2.28
+tensorboard==2.14.0
+tensorboardX==2.6.2.2

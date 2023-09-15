@@ -20,19 +20,17 @@ class YFService(Service):
         ticker = ", ".join(tickers)
         data: DataFrame = download(
             tickers=ticker,
-            period=getenv('DATA_PERIOD'),
+            start=getenv('FETCH_START_DATE'),
+            end=getenv('FETCH_END_DATE'),
             interval=getenv('DATA_INTERVAL'),
             group_by="ticker",
             auto_adjust=True,
             prepost=True,
-            threads=getenv('MAX_THREADS'),
+            threads=int(getenv('MAX_THREADS')),
             proxy=None
         )
 
-        # TODO: Start actually using cache lmao
-        data.to_csv('./cache/raw.csv')
-
-        # Drop rows with "NaN" values
+        # Remove NaN values
         data = data.dropna(axis=0, how="any")
 
         # Reindex data

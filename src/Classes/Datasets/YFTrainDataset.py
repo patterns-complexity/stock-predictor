@@ -17,7 +17,6 @@ class YFTrainDataset(Dataset):
         max_size: int = 100000,
         future_offset_point: int = 1,
         history_time_range: int = 7,
-        device: str = "cuda",
         price_type: str = "Close",
         dtype: dtype = float64
     ):
@@ -39,10 +38,6 @@ class YFTrainDataset(Dataset):
             -   Optional
             -   Number of time units to take into account when predicting the future
             -   Default: `7`
-        - `device` : `str`
-            -   Optional
-            -   Device to use
-            -   Default: `"cuda"`
         - `dtype` : `dtype`
             -   Optional
             -   Data type
@@ -54,7 +49,6 @@ class YFTrainDataset(Dataset):
         self._price_type = price_type
 
         self._max_size = max_size
-        self._device = device
         self._dtype = dtype
 
         self._history_time_range = history_time_range
