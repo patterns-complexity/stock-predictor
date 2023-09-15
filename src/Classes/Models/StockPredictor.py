@@ -5,7 +5,7 @@ from pytorch_lightning import LightningModule as LM
 
 
 class OptimizedLSTMWithAttention(LM):
-    def __init__(self, input_dim=45, sequence_length=30, hidden_dim=256, batch_size=256, learning_rate=0.001):
+    def __init__(self, input_dim=10, sequence_length=30, hidden_dim=256, batch_size=256, learning_rate=0.001):
         super(OptimizedLSTMWithAttention, self).__init__()
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
@@ -63,7 +63,7 @@ class OptimizedLSTMWithAttention(LM):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, 'min')
-        return {'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'train_loss'}
+        return {'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'train_mse_loss'}
 
     def training_step(self, batch, batch_idx):
         x, y, _ = batch
@@ -75,9 +75,9 @@ class OptimizedLSTMWithAttention(LM):
         prediction_error = torch.abs(squeezed_y_hat - y)
 
         self.log_dict({
-            'train_loss': loss.item(),
-            'train_mae_loss': torch.mean(prediction_error).item(),
-            'train_percentage_loss': torch.mean(prediction_error / y).item(),
+            'train_mse_loss': loss.item(),
+            'train_absolute_loss': torch.mean(prediction_error).item(),
+            'train_percentage_loss': torch.mean((prediction_error / y)*100).item(),
         },
             logger=True,
             on_step=True,
