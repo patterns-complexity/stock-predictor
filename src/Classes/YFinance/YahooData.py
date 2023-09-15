@@ -21,7 +21,6 @@ class YahooData(FinanceData):
         super().__init__(tickers, data_fetcher)
 
         # Convert all timezones to tz_naive
-        self._data = self._data.tz_convert('UTC').tz_localize(None)
 
         self._data_interval = getenv('DATA_INTERVAL')
 
