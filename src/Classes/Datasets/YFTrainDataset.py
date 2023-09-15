@@ -1,4 +1,3 @@
-import re
 from pandas import DataFrame, Timedelta
 from typing import List
 from datetime import datetime
@@ -16,8 +15,8 @@ class YFTrainDataset(Dataset):
         tickers: List[str],
         ticker_to_predict: str,
         max_size: int = 100000,
-        future_days_delta: int = 7,
-        history_days_count: int = 30,
+        future_offset_point: int = 1,
+        history_time_range: int = 7,
         device: str = "cuda",
         price_type: str = "Close",
         dtype: dtype = float64
@@ -32,14 +31,14 @@ class YFTrainDataset(Dataset):
             -   Optional
             -   Maximum size of the dataset
             -   Default: `100000`
-        - `future_days_delta` : `int`
+        - `future_offset_point` : `int`
             -   Optional
-            -   Number of days to predict into the future
+            -   Number of time units to predict into the future
+            -   Default: `1`
+        - `history_time_range` : `int`
+            -   Optional
+            -   Number of time units to take into account when predicting the future
             -   Default: `7`
-        - `history_days_count` : `int`
-            -   Optional
-            -   Number of days to take into account when predicting the future
-            -   Default: `30`
         - `device` : `str`
             -   Optional
             -   Device to use
@@ -58,8 +57,8 @@ class YFTrainDataset(Dataset):
         self._device = device
         self._dtype = dtype
 
-        self.history_days_count = history_days_count
-        self.future_days_delta = future_days_delta
+        self._history_time_range = history_time_range
+        self._future_offset_point = future_offset_point
 
         self._data: YahooData = YahooData(tickers, YFService())
 
@@ -68,23 +67,40 @@ class YFTrainDataset(Dataset):
 
     def __getitem__(self, idx):
         random_date = self._data.get_random_date(
-            margin_from_min=self.history_days_count,
-            margin_from_max=self.future_days_delta
+            margin_from_min=self._history_time_range,
+            margin_from_max=self._future_offset_point
         )
 
-        past_data = self._data.get_data_for_date_range(
-            start_date=random_date - Timedelta(days=self.history_days_count),
-            end_date=random_date
+        date_before_random_date = (
+            random_date -
+            Timedelta(value=1, unit=self._data._interval_key)
         )
 
-        future_data = self._data.get_data_for_date(
-            date=random_date + Timedelta(days=self.future_days_delta)
+        past_date = (
+            random_date -
+            Timedelta(value=self._history_time_range,
+                      unit=self._data._interval_key)
         )
 
-        future_data_for_ticker = future_data[self._ticker_to_predict][self._price_type]
+        past_date_data = self._data.get_data_for_date_range(
+            start_date=past_date,
+            end_date=date_before_random_date
+        )
+
+        future_date = (
+            random_date +
+            Timedelta(value=self._future_offset_point,
+                      unit=self._data._interval_key)
+        )
+
+        future_date_data = self._data.get_data_for_date(
+            date=future_date
+        )
+
+        future_data_for_ticker = future_date_data[self._ticker_to_predict][self._price_type]
 
         return [
-            self.data_to_tensor(past_data),
+            self.data_to_tensor(past_date_data),
             self.data_to_tensor(future_data_for_ticker),
             self.date_to_tensor(random_date)
         ]

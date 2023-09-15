@@ -1,6 +1,5 @@
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, Timestamp
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import List
 
 from src.Classes.Services.Service import Service
@@ -12,7 +11,7 @@ class FinanceData(ABC):
         self._data = data_fetcher.fetch_data(tickers)
 
     @abstractmethod
-    def get_tickers(self, tickers: list[str]) -> DataFrame:
+    def get_tickers(self) -> DataFrame:
         pass
 
     @abstractmethod
@@ -20,17 +19,25 @@ class FinanceData(ABC):
         pass
 
     @abstractmethod
-    def get_data_for_date_range(self, tickers: List[str], start_date: datetime, end_date: datetime) -> DataFrame:
+    def get_data_for_date_range(self, start_date: Timestamp, end_date: Timestamp) -> DataFrame:
         pass
 
     @abstractmethod
-    def get_data_for_date(self, tickers: List[str], date: datetime) -> Series:
+    def get_data_for_date(self, date: Timestamp) -> Series:
         pass
 
     @abstractmethod
-    def get_min_date(self) -> datetime:
+    def get_min_date(self) -> Timestamp:
         pass
 
     @abstractmethod
-    def get_max_date(self) -> datetime:
+    def get_max_date(self) -> Timestamp:
+        pass
+
+    @abstractmethod
+    def get_random_date(self, margin_from_min: int, margin_from_max: int) -> Timestamp:
+        pass
+
+    @abstractmethod
+    def get_day_close_datetime_for_date(self, date: Timestamp) -> Timestamp:
         pass

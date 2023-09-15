@@ -1,6 +1,6 @@
+from os import getenv
 from typing import List
-from pandas import DataFrame, Timedelta
-from datetime import datetime
+from pandas import DataFrame, Timedelta, Timestamp
 from random import randint
 
 from src.Classes.Abstract.FinanceData import FinanceData
@@ -19,6 +19,14 @@ class YahooData(FinanceData):
             -   Data fetcher service
         """
         super().__init__(tickers, data_fetcher)
+
+        # Convert all timezones to tz_naive
+        self._data = self._data.tz_convert('UTC').tz_localize(None)
+
+        self._data_interval = getenv('DATA_INTERVAL')
+
+        # TODO: Fix this idiotic conditional
+        self._interval_key = "days" if self._data_interval == "1d" else "hours"
 
     def get_tickers(self) -> DataFrame:
         """
@@ -46,66 +54,63 @@ class YahooData(FinanceData):
         """
         return self._data[self._tickers].iloc[start_index:end_index]
 
-    def get_data_for_date_range(self, start_date: datetime, end_date: datetime) -> DataFrame:
+    def get_data_for_date_range(self, start_date: Timestamp, end_date: Timestamp) -> DataFrame:
         """
         Returns a pandas DataFrame of the data for the specified Yahoo Finance tickers
 
         #### Parameters
-        - `start_date` : `datetime`
+        - `start_date` : `pd.Timestamp`
             -   Date for the beginning of the range
-        - `end_date` : `datetime`
+        - `end_date` : `pd.Timestamp`
             -   Date for the end of the range
 
         #### Returns
         - `DataFrame`
             -   Data for the specified date range
         """
+
         tickers_data = self._data[self._tickers] if len(
             self._tickers) > 1 else self._data
 
-        start_index = tickers_data.index.get_indexer(
-            [start_date], method="nearest")[0]
-        end_index = tickers_data.index.get_indexer(
-            [end_date], method="nearest")[0]
+        return tickers_data.loc[start_date:end_date]
 
-        return tickers_data.iloc[start_index:end_index]
-
-    def get_data_for_date(self, date: datetime) -> DataFrame:
+    def get_data_for_date(self, date: Timestamp) -> DataFrame:
         """
         Returns a pandas DataFrame of the data for the specified Yahoo Finance tickers for the specified date
 
         #### Parameters
-        - `date` : `datetime`
+        - `date` : `pd.Timestamp`
             -   Date for the data
 
         #### Returns
         - `DataFrame`
             -   Data for the specified date
         """
+
         date_index = self._data.index.get_indexer([date], method="nearest")[0]
         return self._data[self._tickers].iloc[date_index] if len(self._tickers) > 1 else self._data.iloc[date_index]
 
-    def get_min_date(self) -> datetime:
+    def get_min_date(self) -> Timestamp:
         """
         Returns the minimum date in the dataset
 
         #### Returns
-        - `datetime`
+        - `pd.Timestamp`
             -   Minimum date in the dataset
         """
         return self._data.index.min()
 
-    def get_max_date(self) -> datetime:
+    def get_max_date(self) -> Timestamp:
         """
         Returns the maximum date in the dataset
 
         #### Returns
-        - `datetime`
+        - `pd.Timestamp`
             -   Maximum date in the dataset
         """
         return self._data.index.max()
 
-    def get_random_date(self, margin_from_min: int, margin_from_max: int) -> datetime:
+    def get_random_date(self, margin_from_min: int, margin_from_max: int) -> Timestamp:
         """
         Returns a random date in the dataset
 
@@ -114,13 +119,63 @@ class YahooData(FinanceData):
             -   Margin from the minimum date
         - `margin_from_max` : `int`
             -   Margin from the maximum date
-        """
-        min_date: datetime = self.get_min_date() + \
-            Timedelta(days=margin_from_min)
-        max_date: datetime = self.get_max_date() - \
-            Timedelta(days=margin_from_max)
 
-        random_date: datetime = min_date + \
-            Timedelta(days=randint(0, (max_date - min_date).days))
+        #### Returns
+        - `pd.Timestamp`
+            -   Random date in the dataset
+        """
+        min_date: Timestamp = self.get_min_date()
+        max_date: Timestamp = self.get_max_date()
+
+        min_date_fast_forwarded: Timestamp = min_date + \
+            Timedelta(value=margin_from_min, unit=self._interval_key)
+        max_date_rewound: Timestamp = max_date - \
+            Timedelta(value=margin_from_max, unit=self._interval_key)
+
+        min_index: int = self._data.index.get_indexer(
+            [min_date_fast_forwarded], method="nearest"
+        )[0]
+
+        max_index: int = self._data.index.get_indexer(
+            [max_date_rewound], method="nearest"
+        )[0]
+
+        random_date: Timestamp = self._data.index[randint(
+            min_index, max_index)]
 
         return random_date
+
+    def get_day_close_datetime_for_date(self, date: Timestamp) -> Timestamp:
+        """
+        Returns the timestamp of the day close for the specified date
+
+        #### Parameters
+        - `date` : `datetime`
+            -   Date for the data
+
+        #### Returns
+        - `pd.Timestamp`
+            -   Timestamp of the day close for the specified date
+        """
+        return Timestamp(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            hour=16,
+            minute=0,
+            second=0
+        )
+
+    def timestamp_to_utc(self, timestamp: Timestamp) -> Timestamp:
+        """
+        Converts a timestamp to UTC
+
+        #### Parameters
+        - `timestamp` : `pd.Timestamp`
+            -   Timestamp to convert
+
+        #### Returns
+        - `pd.Timestamp`
+            -   Timestamp converted to UTC
+        """
+        return timestamp.tz_convert('UTC').tz_localize(None)
