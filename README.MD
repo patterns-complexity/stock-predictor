@@ -1,5 +1,3 @@
-<link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
-
 <div class="content">
 
 <div style="display: flex; justify-content: left; align-items: center; margin-top: 30px;">
@@ -38,53 +36,63 @@ cp env.predict.dist .env.predict # WARNING: PREDICTION ENVIRONMENT IS NOT PROPER
 nano ./.env.train
 ```
 
+<!-- ENVIRONMENT VARIABLES -->
+
+
+
 ### Yahoo Finance API parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `TICKERS` | A comma-separated list of tickers to fetch data for <span class="note">(min 2)</span>. <br /> The model takes all of those tickers into consideration when training and predicting. <br /> **Always predict with the same value you trained the model on!** | <span class="note">N/A</span> |
-| `DATA_INTERVAL` | The granularity of the data fetched from Yahoo Finance. Later referenced as a `time unit` | `1h` |
-| `FETCH_START_DATE` | The beginning date of the time span the model will be basing its predictions on. | `2022-01-01` |
-| `FETCH_END_DATE` | The end date of the time span the model will be basing its predictions on. | `2022-01-07` |
-| `MAX_THREADS` | Maximum number of threads to use for data fetching. <span class="note">(used by the `yfinance` library)</span> | `1` |
+| Variable | Value | Description |
+| --- | --- | --- |
+| TICKERS |                 `"AAPL,MSFT,GOOG,AMZN...`                 |  Tickers passed as training data to the model |
+| DATA_INTERVAL |                 `"1h" `                 |  Granularity of the data (time unit) |
+| FETCH_START_DATE |                 `"2023-01-01" `                 |  Date range beginning of the data |
+| FETCH_END_DATE |                 `"2023-03-01" `                 |  Date range end of the data |
+| FETCH_START_DATE_VALIDATION |                 `"2023-03-02" `                 |  Date range beginning of the validation data |
+| FETCH_END_DATE_VALIDATION |                 `"2023-06-02" `                 |  Date range end of the validation data |
+| MAX_THREADS |                 `32 `                 |  Maximum number of threads to use for fetching the data |
 
 ### Dataset parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `DATA_SAMPLES` | Number of training samples the dataset will generate <span class="note">(sampled from the downloaded data)</span> | `100000` |
-| `TICKER_TO_PREDICT` | Ticker to predict <span class="note">(must be in the `TICKERS` list)</span> <br /> **Currently it has to be set to the same value between training and predicting, but this is intended to change!** | <span class="note">N/A</span> |
-| `PRICE_TYPE` | Type of price to predict <span class="note">(`Open`, `High`, `Low`, `Close`)</span> | `Close` |
-| `HISTORY_TIME_RANGE` | Number of time units to look back into the past during training | `24` |
-| `FUTURE_OFFSET_POINT` | Number of time units into the future to predict for. <br /> <span class="note">**NOT A RANGE! It's a single point in time!**</span> | `8` |
+| Variable | Value | Description |
+| --- | --- | --- |
+| DATA_SAMPLES |                 `100000 `                 |  Number of samples to generate |
+| TICKER_TO_PREDICT |                 `"AAPL" `                 |  Ticker to predict |
+| PRICE_TYPE |                 `"Close" `                 |  Price type to predict |
+| HISTORY_TIME_RANGE |                 `24 `                 |  Number of time units to look back into the past |
+| FUTURE_OFFSET_POINT |                 `4 `                 |  Number of time units to look into the future |
 
 ### Provider-specific (default: Yahoo Finance) price parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `PRICES_PER_TICKER_COUNT` | **DO NOT CHANGE** <br />UNLESS YOU ARE USING A DIFFERENT DATA PROVIDER!<br /> Number of prices to fetch per ticker <span class="note">(used to calculate the number of features)</span> | `5` |
+| Variable | Value | Description |
+| --- | --- | --- |
+| PRICES_PER_TICKER_COUNT |                 `5 `                 |  Number of prices the provider returns per ticker (DO NOT CHANGE UNLESS YOU WANT TO CHANGE THE DATA PROVIDER!) |
 
 ### Data loader parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `BATCH_SIZE` | Batch size for training | `256` |
-| `NUM_WORKERS` | Number of workers for the DataLoader (basically the number of threads to use for data loading) | `4` |
+| Variable | Value | Description |
+| --- | --- | --- |
+| BATCH_SIZE |                 `1024 `                 |  Batch size |
+| NUM_WORKERS |                 `8 `                 |  Number of workers to load the data |
 
 ### Model parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `USE_CUDA` | Whether to use `CUDA` or not. <br /> <span class="note">**This does not change anything yet. Pytorch Lightning should pick the best device by default for now. If you prefer to use a different device please modify the value in code for now. This is intended to change!**</span> | `True` |
-| `DEVICE` | If `CUDA` is enabled, this is the `GPU` index that will be used. <br /> <span class="note">**This does not change anything yet. Pytorch Lightning should pick the best device by default for now. If you prefer to use a different device please modify the value in code for now. This is intended to change!**</span> | `0` |
-| `HIDDEN_DIM` | Hidden dimension of LSTM layers and all additional layers connected to them | `256` |
-| `LEARNING_RATE` | My IQ <span class="note">(jk, it's the learning rate, duh)</span> | `0.001` |
+| Variable | Value | Description |
+| --- | --- | --- |
+| USE_CUDA |                 `True `                 |  Use CUDA? (DOES NOT WORK YET!) |
+| DEVICE |                 `0 `                 |  GPU device ID (DOES NOT WORK YET!) |
+| HIDDEN_DIM |                 `256 `                 |  Hidden dimension of the model (NOT IMPLEMENTED YET!) |
+| LEARNING_RATE |                 `0.001 `                 |  Learning rate |
+| CHECKPOINT_PATH |                 `"./checkpoints" `                 |  Path to save the model checkpoints to |
 
 ### Training parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `NUM_EPOCHS` | Number of epochs to train for | `200` |
-| `MATMUL_PRECISION` | Precision of the matrix multiplication used in the attention layer. <br /> **Read up on it in the PyTorch documentation if you encounter any problems with it.** | `medium` |
+| Variable | Value | Description |
+| --- | --- | --- |
+| NUM_EPOCHS |                 `200 `                 |  Number of epochs to train the model |
+| MATMUL_PRECISION |                 `"medium" `                 |  Precision of the matrix multiplication (low, medium, high) |
 
-### Logging parameters
-| Option | Description | Default Value |
-| ------ | ----------- | ------------- |
-| `LANGUAGE` | Program's language. <br /> **Not implemented yet.** | `en` |
+### Predictor's language (not implemented yet)
+| Variable | Value | Description |
+| --- | --- | --- |
+| LANGUAGE |                 `"en" `                 |  Predictor's language (NOT IMPLEMENTED YET!) |
+
+<!-- /ENVIRONMENT VARIABLES -->
+
 
 ## Usage
 ```bash

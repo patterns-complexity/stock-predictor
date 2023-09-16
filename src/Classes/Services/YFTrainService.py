@@ -5,7 +5,7 @@ from os import getenv
 from src.Classes.Services.Service import Service
 
 
-class YFService(Service):
+class YFTrainService(Service):
     def __init__(self) -> None:
         super().__init__()
 

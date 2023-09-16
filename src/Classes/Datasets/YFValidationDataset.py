@@ -6,10 +6,10 @@ from torch import dtype, tensor, Tensor, float64
 from torch.utils.data import Dataset
 
 from src.Classes.YFinance.YahooData import YahooData
-from src.Classes.Services.YFTrainService import YFTrainService
+from src.Classes.Services.YFValidationService import YFValidationService
 
 
-class YFTrainDataset(Dataset):
+class YFValidationDataset(Dataset):
     def __init__(
         self,
         tickers: List[str],
@@ -43,7 +43,7 @@ class YFTrainDataset(Dataset):
             -   Data type
             -   Default: `torch.float64`
         """
-        super(YFTrainDataset, self).__init__()
+        super(YFValidationDataset, self).__init__()
 
         self._ticker_to_predict = ticker_to_predict
         self._price_type = price_type
@@ -54,7 +54,7 @@ class YFTrainDataset(Dataset):
         self._history_time_range = history_time_range
         self._future_offset_point = future_offset_point
 
-        self._data: YahooData = YahooData(tickers, YFTrainService())
+        self._data: YahooData = YahooData(tickers, YFValidationService())
 
     def __len__(self):
         return self._max_size
