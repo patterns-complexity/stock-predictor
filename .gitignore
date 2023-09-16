@@ -4,6 +4,7 @@ __pycache__
 /cache/*
 /.env.train
 /.vscode
-/lightning_logs
-/runs
+/lightning_logs/*
+/*.ckpt
+/checkpoints/*
 ```

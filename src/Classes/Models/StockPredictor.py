@@ -1,91 +1,138 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from enum import Enum
+from typing import Optional
+
+from torch import Tensor, tensor
+from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch import \
+    abs as tabs, \
+    median as tmedian, \
+    mul as tmul, \
+    divide as tdiv, \
+    pow as tpow
+from torch.utils.tensorboard.writer import SummaryWriter
 from pytorch_lightning import LightningModule as LM
+from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
+
+from src.Classes.Modules.StockPredictorModule.StockPredictorModule import StockPredictorModule
 
 
-class OptimizedLSTMWithAttention(LM):
-    def __init__(self, input_dim=10, sequence_length=30, hidden_dim=256, batch_size=256, learning_rate=0.001):
-        super(OptimizedLSTMWithAttention, self).__init__()
-        self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
-        self.learning_rate = learning_rate
-        self.sequence_length = sequence_length
+class CurrentProcess(Enum):
+    LR_FIND = 0
+    TRAINING = 1
 
-        # Input Layer: Normalization
-        self.layer_norm = nn.LayerNorm(input_dim)
 
-        # LSTM Layer
-        self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+class StockPredictor(LM):
+    def __init__(
+        self,
+        module: StockPredictorModule,
+        custom_logger: TensorBoardLogger,
+        learning_rate: float = 0.00
+    ) -> None:
+        super(StockPredictor, self).__init__()
+        self.learning_rate: float = learning_rate
+        self.module: StockPredictorModule = module
+        self.custom_logger: TensorBoardLogger = custom_logger
 
-        # Attention Layer
-        self.attention = nn.MultiheadAttention(hidden_dim, num_heads=1)
+        self._experiment: SummaryWriter = self.custom_logger.experiment
 
-        # Dense Layer
-        self.fc1 = nn.Linear(hidden_dim, hidden_dim // 2)
-
-        # Output Layer
-        self.fc2 = nn.Linear(
-            hidden_dim // 2 * sequence_length,
-            1
-        )
-
-        # Batch Normalization
-        self.batch_norm = nn.BatchNorm1d(sequence_length)
-
-        # Dropout
-        self.dropout = nn.Dropout(0.2)
+        self._current_process: Optional[CurrentProcess] = None
 
     def forward(self, x):
-        # Input Layer
-        x = self.layer_norm(x)
+        return self.module(x)
 
-        # LSTM Layer
-        lstm_out, _ = self.lstm(x)
-        lstm_out = self.batch_norm(lstm_out)
-        lstm_out = self.dropout(lstm_out)
+    def configure_optimizers(self) -> dict:
+        optimizer: Adam = Adam(
+            self.parameters(),
+            lr=self.learning_rate
+        )
+        scheduler: ReduceLROnPlateau = ReduceLROnPlateau(
+            optimizer,
+            'min'
+        )
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': scheduler,
+            'monitor': 'train_mse_loss',
+            'interval': 'step',
+            'frequency': 50,
+            'strict': True,
+        }
 
-        # Attention Layer
-        attn_output, _ = self.attention(lstm_out, lstm_out, lstm_out)
+    def calculate_loss(self, y_hat, y) -> list[Tensor, dict[str, Tensor]]:
+        percentage_diff = tmul(
+            tdiv(tabs(y_hat - y), y),
+            tensor(100)
+        )
 
-        # Dense Layer
-        dense_out = F.relu(self.fc1(attn_output))
+        median_percentage_diff = tmedian(percentage_diff)
 
-        # Flatten
-        dense_out = dense_out.reshape(self.batch_size, -1)
+        min_percentage_diff = percentage_diff.min()
+        max_percentage_diff = percentage_diff.max()
 
-        # Output Layer
-        output = self.fc2(dense_out)
+        max_vs_min_percentage_diff = tabs(
+            max_percentage_diff - min_percentage_diff
+        )
 
-        return output
+        loss = max_vs_min_percentage_diff + tpow(max_percentage_diff, 2)
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, 'min')
-        return {'optimizer': optimizer, 'lr_scheduler': scheduler, 'monitor': 'train_mse_loss'}
+        return loss, {
+            "Median percentage diff": median_percentage_diff,
+            "Min percentage diff": min_percentage_diff,
+            "Max percentage diff": max_percentage_diff,
+            "Min vs max percentage diff": max_vs_min_percentage_diff,
+            "Learning rate": self.learning_rate,
+        }
 
     def training_step(self, batch, batch_idx):
         x, y, _ = batch
         y_hat = self(x)
-        squeezed_y_hat = y_hat.squeeze()
+        y_hat_squeezed = y_hat.squeeze()
 
-        loss = F.mse_loss(squeezed_y_hat, y)
-
-        prediction_error = torch.abs(squeezed_y_hat - y)
+        loss, plots = self.calculate_loss(y_hat_squeezed, y)
 
         self.log_dict({
-            'train_mse_loss': loss.item(),
-            'train_absolute_loss': torch.mean(prediction_error).item(),
-            'train_percentage_loss': torch.mean((prediction_error / y)*100).item(),
+            "train_mse_loss": loss,
         },
+            prog_bar=True,
             logger=True,
             on_step=True,
             on_epoch=True,
-            prog_bar=True,
-            sync_dist=True,
-            batch_size=self.batch_size,
-            enable_graph=True,
+        )
+
+        self._experiment.add_scalars(
+            "training" if self._current_process == CurrentProcess.TRAINING else "lr_find_train",
+            plots,
+            global_step=self.global_step,
         )
 
         return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y, _ = batch
+        y_hat = self(x)
+        squeezed_y_hat = y_hat.squeeze()
+
+        loss, plots = self.calculate_loss(squeezed_y_hat, y)
+
+        self.log_dict({
+            "train_mse_loss": loss,
+        },
+            prog_bar=True,
+            logger=True,
+            on_step=True,
+            on_epoch=True,
+        )
+
+        self._experiment.add_scalars(
+            "validation" if self._current_process == CurrentProcess.TRAINING else "lr_find_val",
+            plots,
+            global_step=self.global_step,
+        )
+
+        self._experiment.add_graph(self, x)
+
+        return loss
+
+    def set_current_process(self, current_process: CurrentProcess):
+        self._current_process = current_process

@@ -1,5 +1,5 @@
 from environs import Env
-from os import getenv, path
+from os import path
 from enum import Enum
 from argparse import ArgumentParser
 from tabulate import tabulate
@@ -30,61 +30,113 @@ path = path.normpath(strpath)
 env = Env()
 env.read_env(path=path)
 
-env_vars = [
-    [Fore.BLACK +
-        "\n# Yahoo Finance API parameters", "" + Style.RESET_ALL],
-    [Fore.GREEN + "TICKERS", getenv("TICKERS") + Style.RESET_ALL],
-    [Fore.GREEN + "DATA_INTERVAL", getenv("DATA_INTERVAL") + Style.RESET_ALL],
-    [Fore.GREEN + "FETCH_START_DATE",
-        getenv("FETCH_START_DATE") + Style.RESET_ALL],
-    [Fore.GREEN + "FETCH_END_DATE",
-        getenv("FETCH_END_DATE") + Style.RESET_ALL],
-    [Fore.BLACK +
-        "\n# Dataset parameters", "" + Style.RESET_ALL],
-    [Fore.YELLOW + "DATA_SAMPLES", getenv("DATA_SAMPLES") + Style.RESET_ALL],
-    [Fore.YELLOW + "TICKER_TO_PREDICT",
-        getenv("TICKER_TO_PREDICT") + Style.RESET_ALL],
-    [Fore.YELLOW + "PRICE_TYPE", getenv("PRICE_TYPE") + Style.RESET_ALL],
-    [Fore.YELLOW + "HISTORY_TIME_RANGE",
-        getenv("HISTORY_TIME_RANGE") + Style.RESET_ALL],
-    [Fore.YELLOW + "FUTURE_OFFSET_POINT",
-        getenv("FUTURE_OFFSET_POINT") + Style.RESET_ALL],
-    [Fore.BLACK +
-        "\n# Data loader parameters", "" + Style.RESET_ALL],
-    [Fore.LIGHTGREEN_EX + "BATCH_SIZE",
-        getenv("BATCH_SIZE") + Style.RESET_ALL],
-    [Fore.LIGHTGREEN_EX + "NUM_WORKERS",
-        getenv("NUM_WORKERS") + Style.RESET_ALL],
-    [Fore.BLACK +
-        "\n# Model parameters", "" + Style.RESET_ALL],
-    [Fore.MAGENTA + "USE_CUDA", getenv("USE_CUDA") + Style.RESET_ALL],
-    [Fore.MAGENTA + "DEVICE", getenv("DEVICE") + Style.RESET_ALL],
-    [Fore.MAGENTA + "HIDDEN_DIM", getenv("HIDDEN_DIM") + Style.RESET_ALL],
-    [Fore.MAGENTA + "LEARNING_RATE",
-        getenv("LEARNING_RATE") + Style.RESET_ALL],
-    [Fore.BLACK +
-        "\n# Training parameters", "" + Style.RESET_ALL],
-    [Fore.RED + "NUM_EPOCHS", getenv("NUM_EPOCHS") + Style.RESET_ALL],
-    [Fore.RED + "MATMUL_PRERCISION",
-        getenv("MATMUL_PRECISION") + Style.RESET_ALL],
-    [Fore.BLACK +
-        "\n# Provider-specific (default: Yahoo Finance) price parameters", "" + Style.RESET_ALL],
-    [Fore.BLUE + "PRICES_PER_TICKER_COUNT",
-        getenv("PRICES_PER_TICKER_COUNT") + Style.RESET_ALL],
-    [Fore.BLACK +
-        "\n", "" + Style.RESET_ALL],
-    [Fore.BLACK +
-        "# Predictor's language (not implemented yet)", "" + Style.RESET_ALL],
-    [Fore.BLACK + Style.DIM + "LANGUAGE",
-        getenv("LANGUAGE") + Style.RESET_ALL],
 
+def read_env(path):
+    file_content = ''
+
+    with open(path) as env_file:
+        file_content = env_file.read()
+
+    return file_content
+
+
+def parse_env(file_content):
+    sections = []
+
+    for line in file_content.splitlines():
+        if line.strip() == '':
+            continue
+
+        if line.startswith('#'):
+            sections.append([f"{line.split('#')[1].strip()}", []])
+            continue
+
+        sections[-1][1].append([
+            line.split('=')[0],
+            line.split('=')[1].split('#')[0],
+            line.split('#')[1]
+            if len(line.split('#')) > 1
+            else None,
+        ])
+
+    return sections
+
+
+def print_env(sections, colors):
+    for section in sections:
+        print(colors.pop(0) + f'# {section[0]}')
+        print(tabulate(
+            section[1],
+            headers=["Variable", "Value", "Description"]
+        ))
+        print("\n" + Style.RESET_ALL)
+
+
+def generate_markdown_table(sections):
+    markdown = ''
+
+    for section in sections:
+        markdown += '\n\n'
+        markdown += f'### {section[0]}\n'
+        markdown += '| Variable | Value | Description |\n'
+        markdown += '| --- | --- | --- |\n'
+        markdown += '\n'.join(
+            [
+                f'| {variable[0]} | \
+                `{variable[1] if len(variable[1]) < 20 else (variable[1][0:20] + "...")}` \
+                | {variable[2]} |'
+                for variable in section[1]
+            ]
+        )
+
+    return markdown
+
+
+def replace_markdown_table_in_readme(markdown):
+    readme_path = './README.MD'
+
+    with open(readme_path, 'r') as readme_file:
+        readme_content = readme_file.read()
+
+    readme_beginning = readme_content.split(
+        '\n\n<!-- ENVIRONMENT VARIABLES -->'
+    )[0]
+    readme_end = readme_content.split(
+        '<!-- /ENVIRONMENT VARIABLES -->\n\n'
+    )[1]
+
+    readme_content = readme_beginning + \
+        '\n\n<!-- ENVIRONMENT VARIABLES -->\n\n' + \
+        markdown + \
+        '\n\n<!-- /ENVIRONMENT VARIABLES -->\n\n' + \
+        readme_end
+
+    with open(readme_path, 'w') as readme_file:
+        readme_file.write(readme_content)
+
+
+def overwrite_dist(path):
+    with open(f'{path}.dist', 'w') as dist_file:
+        dist_file.write(read_env(path))
+
+
+file_content = read_env(path)
+sections = parse_env(file_content)
+
+colors: list[str] = [
+    Fore.GREEN,
+    Fore.YELLOW,
+    Fore.LIGHTGREEN_EX,
+    Fore.MAGENTA,
+    Fore.RED,
+    Fore.BLUE,
+    Fore.BLACK,
 ]
-print("\n")
-print(
-    tabulate(
-        env_vars,
-        headers=[Fore.MAGENTA +
-                 "Variable", "Value" + Style.RESET_ALL]
-    )
-)
-print("\n")
+
+print_env(sections, colors)
+
+markdown = generate_markdown_table(sections)
+
+replace_markdown_table_in_readme(markdown)
+
+overwrite_dist(path)
