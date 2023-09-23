@@ -43,7 +43,7 @@ nano ./.env.train
 ### Yahoo Finance API parameters
 | Variable | Value | Description |
 | --- | --- | --- |
-| TICKERS |                 `"AAPL,MSFT,GOOG,AMZN...`                 |  Tickers passed as training data to the model |
+| TICKERS |                 `"TSLA" `                 |  Tickers passed as training data to the model |
 | DATA_INTERVAL |                 `"1h" `                 |  Granularity of the data (time unit) |
 | FETCH_START_DATE |                 `"2023-01-01" `                 |  Date range beginning of the data |
 | FETCH_END_DATE |                 `"2023-03-01" `                 |  Date range end of the data |
@@ -55,7 +55,7 @@ nano ./.env.train
 | Variable | Value | Description |
 | --- | --- | --- |
 | DATA_SAMPLES |                 `100000 `                 |  Number of samples to generate |
-| TICKER_TO_PREDICT |                 `"AAPL" `                 |  Ticker to predict |
+| TICKER_TO_PREDICT |                 `"TSLA" `                 |  Ticker to predict |
 | PRICE_TYPE |                 `"Close" `                 |  Price type to predict |
 | HISTORY_TIME_RANGE |                 `24 `                 |  Number of time units to look back into the past |
 | FUTURE_OFFSET_POINT |                 `4 `                 |  Number of time units to look into the future |
@@ -68,8 +68,8 @@ nano ./.env.train
 ### Data loader parameters
 | Variable | Value | Description |
 | --- | --- | --- |
-| BATCH_SIZE |                 `1024 `                 |  Batch size |
-| NUM_WORKERS |                 `8 `                 |  Number of workers to load the data |
+| BATCH_SIZE |                 `256 `                 |  Batch size |
+| NUM_WORKERS |                 `4 `                 |  Number of workers to load the data |
 
 ### Model parameters
 | Variable | Value | Description |
