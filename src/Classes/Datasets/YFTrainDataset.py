@@ -45,6 +45,8 @@ class YFTrainDataset(Dataset):
         """
         super(YFTrainDataset, self).__init__()
 
+        self._tickers = tickers
+
         self._ticker_to_predict = ticker_to_predict
         self._price_type = price_type
 
@@ -91,7 +93,11 @@ class YFTrainDataset(Dataset):
             date=future_date
         )
 
-        future_data_for_ticker = future_date_data[self._ticker_to_predict][self._price_type]
+        future_data_for_ticker = (
+            future_date_data[self._price_type]
+            if len(self._tickers) == 1
+            else future_date_data[self._price_type][self._ticker_to_predict]
+        )
 
         return [
             self.data_to_tensor(past_date_data),
