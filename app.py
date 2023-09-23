@@ -120,18 +120,18 @@ if __name__ == "__main__":
     )
 
     # %% Find the learning rate
-    model.set_current_process(CurrentProcess.LR_FIND)
-    tuner.lr_find(
-        model=model,
-        train_dataloaders=yf_train_dataloader,
-        val_dataloaders=yf_validation_dataloader,
-        min_lr=1e-6,
-        max_lr=1e-1,
-        num_training=100,
-        update_attr=True,
-        attr_name='learning_rate',
-    )
-    model.set_current_process(CurrentProcess.TRAINING)
+    # model.set_current_process(CurrentProcess.LR_FIND)
+    # tuner.lr_find(
+    #     model=model,
+    #     train_dataloaders=yf_train_dataloader,
+    #     val_dataloaders=yf_validation_dataloader,
+    #     min_lr=1e-6,
+    #     max_lr=1e-1,
+    #     num_training=100,
+    #     update_attr=True,
+    #     attr_name='learning_rate',
+    # )
+    # model.set_current_process(CurrentProcess.TRAINING)
 
     # %% Train the model
     trainer.fit(
